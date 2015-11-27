@@ -83,3 +83,9 @@ header .hide-completed {
   }
 }
 
+#map {
+    height: 600px;
+    min-height: 100%;
+    min-width: 100%;
+  }
+

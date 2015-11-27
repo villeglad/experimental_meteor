@@ -1,5 +1,7 @@
 Meteor.subscribe("tasks");
 
+
+
 Template.body.helpers({
     tasks: function() {
         if (Session.get("hideCompleted")) {
@@ -25,7 +27,7 @@ Template.body.events({
 
         var text = event.target.text.value;
 
-        Meteor.call("addTask", text);
+        Meteor.call("addTask", text, Session.get("coordinates"));
 
         //clear form
         event.target.text.value = "";
@@ -38,6 +40,9 @@ Template.body.events({
 Template.task.helpers({
     isOwner: function () {
         return this.owner === Meteor.userId();
+    },
+    locString: function() {
+        return JSON.stringify(this.latlng);
     }
 });
 
@@ -53,6 +58,51 @@ Template.task.events({
         Meteor.call("setPrivate", this._id, ! this.private);
     }
 
+});
+
+Template.map.rendered = function() {
+    //leaflet
+    L.Icon.Default.imagePath = 'packages/bevanhunt_leaflet/images';
+    var map = L.map('map', {
+        center: [0,0],
+        zoom: 13
+    });
+
+    // Locate the user and set the map position
+    map.locate({
+        setView: true,
+        maxZoom: 12
+    });
+    map.on("dblclick", function(e) {
+        Session.set("coordinates", e.latlng);
+    })
+    Session.set("location", map.getCenter());
+    L.tileLayer.provider('OpenStreetMap.BlackAndWhite').addTo(map);
+    map.doubleClickZoom.disable();
+
+    var markers = Tasks.find({}, {sort: {createdAt: -1}}); //change to find where latlng is set
+    console.log(markers);
+
+    markers.forEach(function(marker) {
+        console.log(marker.latlng);
+        if (marker.latlng != 'undefined') {
+            var marker = L.marker(marker.latlng).addTo(map);
+        }
+        
+    });
+    //observe task creation => add marker to map
+    markers.observe({
+        added: function (document) {
+          var marker = L.marker(document.latlng).addTo(map)
+        }
+    });
+    
+}
+
+Template.map.helpers({
+    location: function () {
+        return JSON.stringify(Session.get("coordinates"));
+    }
 });
 
 Accounts.ui.config({
